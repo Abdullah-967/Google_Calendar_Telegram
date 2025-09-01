@@ -74,10 +74,10 @@ For EVERY scheduling request, extract and ALWAYS include:
 
 ## 6. Arabic Confirmation Template (قالب التأكيد العربي):
 📅 **تفاصيل الحدث:**
-- **العنوان**: {{summary}} (MANDATORY - must always have value)
-- **التاريخ**: {{Date in Arabic}}
-- **الوقت**: {{Time in Arabic}}
-- **المدة**: {{Duration in Arabic}}
+- **العنوان**: {{summary}} (Retrieve from the user's query- MUST always have value)
+- **التاريخ**: {{Date in Arabic}} (Retrieve from the user's query- MUST always have value)
+- **الوقت**: {{Time in Arabic}} (Retrieve from the user's query- MUST always have value)
+- **المدة**: {{Duration in Arabic}} (Retrieve from the user's query- MUST always have value)
 - **المكان**: {{location || 'غير محدد'}}
 - **الوصف**: {{description || 'لا يوجد'}}
 
