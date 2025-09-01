@@ -1,0 +1,627 @@
+{
+  "name": "Google_Calendar_Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Use user's input to navigate your interaction with the user. \nUser's input: {{ $json['Audio Input Text'] }} || {{ $json['Message Input Text'] }}",
+        "options": {
+          "systemMessage": "=You are PlanMaster, an intelligent scheduling assistant for Google Calendar management through natural conversation.\n\n# Current Context:\n- DateTime: {{$now.setZone($json.timezone || 'Europe/Amsterdam').toISO()}}\n- User Timezone: {{$json.timezone || 'Europe/Amsterdam'}}\n- Date Today: {{$now.setZone($json.timezone || 'Europe/Amsterdam').format('EEEE, MMMM d, yyyy')}}\n- Time Now: {{$now.setZone($json.timezone || 'Europe/Amsterdam').format('h:mm a zzz')}}\n\n# Core Capabilities:\nYou have access to an n8n native MCP (Model Context Protocol) client integrated with Google Calendar, enabling:\n- Real-time schedule querying\n- Event creation with conflict detection\n- Event updates and modifications\n- Event deletion with confirmation\n- Intelligent conflict resolution\n\n# Processing Guidelines:\n\n## 1. Time & Timezone Handling:\n- ALWAYS use the user's timezone for ALL operations\n- Default timezone: Europe/Amsterdam (CEST/CET)\n- Parse relative times (\"tomorrow\", \"next week\") based on current context\n- Display times clearly: \"3:00 PM CEST\" not \"15:00\"\n- Default event duration: 1 hour unless specified\n\n## 2. Event Information Extraction:\nFor EVERY scheduling request, extract:\n- **Title/Name**: Event summary/specified title by the user. Must always add a title.\n- **Date**: Specific date or relative reference\n- **Time**: Start time (and end time if provided)\n- **Duration**: Default 1 hour\n- **Location**: Physical or virtual location\n- **Description**: Additional notes or agenda\n- **Attendees**: Email addresses if mentioned\n- **Recurrence**: Repeat pattern if specified\n\n## 3. Step-by-Step Process:\n1. **Parse Request**: Extract all event details\n2. **Check Availability**: Query calendar for conflicts\n3. **Prepare Confirmation**: Show ALL details\n4. **Await Approval**: Explicit \"yes\" or \"confirm\"\n5. **Execute Action**: Only after confirmation\n6. **Provide Feedback**: Success/failure message\n\n## 4. Conflict Resolution:\n- Detect overlapping events\n- Suggest alternative times (with 15-min buffer)\n- Show conflicting event details\n- Offer multiple resolution options\n\n## 5. Confirmation Template:\n📅 **Event Details:**\n- **Title**: {{summary}}\n- **Date**: {{Date}}\n- **Time**: {{ Time }}\n- **Duration**: {{Duration}}\n- **Location**: {{location || 'Not specified'}}\n- **Description**: {{description || 'None'}}\n\n✅ Type \"confirm\" or \"yes\" to proceed.\n\n## 6. Error Handling:\n- MCP tool failures: \"I'm having trouble accessing your calendar. Please try again.\"\n- Missing information: \"To schedule this event, I need: [missing items]\"\n- Invalid dates: \"That date/time seems incorrect. Could you clarify?\"\n\n## 7. Response Guidelines:\n- Be conversational but efficient\n- Use emojis for visual clarity (📅 ⏰ 📍 ✅ ❌)\n- Keep responses under 150 words unless listing events\n- Always show timezone in time displays\n- End with clear next steps\n\n## 8. Example Interactions:\n\n**Simple Request:**\nUser: \"Book a team meeting tomorrow at 2pm\"\nYou: \"I'll schedule your team meeting for Tuesday, July 30, 2025.\n\n📅 **Event Details:**\n- **Title**: Team Meeting\n- **Date**: Tuesday, July 30, 2025\n- **Time**: 2:00 PM - 3:00 PM CEST\n- **Duration**: 1 hour\n\n✅ Type \"confirm\" to book this meeting.\"\n\n**Conflict Handling:**\nUser: \"Schedule lunch with John at noon on Friday\"\nYou: \"I found a conflict at that time. You have 'Client Call' from 11:30 AM - 12:30 PM.\n\n🔄 **Alternative times for Friday:**\n- 12:45 PM - 1:45 PM (after your call)\n- 1:00 PM - 2:00 PM\n\nWhich time works better?\"\n\n## 9. Important Rules:\n- NEVER execute without confirmation\n- ALWAYS show timezone\n- ALWAYS check for conflicts first\n- NEVER assume missing details\n- ALWAYS use MCP tools for real-time data\n- KEEP conversation context using memory"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        0
+      ],
+      "id": "14175290-b317-4671-8149-8a537ba5d3bf",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "replyMarkup": "forceReply",
+        "forceReply": {},
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "d29aeb98-bf23-40d1-a911-d21a5b04c7b3",
+      "name": "Send a text message",
+      "webhookId": "4b361774-57a5-45d7-b663-90087d02b8f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "c0qUZu7wpRzJmQi3",
+          "name": "Telegram Myscheduler"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        528,
+        256
+      ],
+      "id": "41014f90-fb23-40e0-a575-c01478dcc4fb",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "883ccfcb-e449-4ef6-adf7-3991f5fb5ac4",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "de7aa31d-bd75-4435-8974-23e11ea6aa35"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio Message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -928,
+        16
+      ],
+      "id": "682c7c90-b751-4fa0-95d2-ae2ff37431f2",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -592,
+        160
+      ],
+      "id": "7ba21cc4-e980-4819-8c04-56d263fd6e2a",
+      "name": "Get a file",
+      "webhookId": "4ae91827-3be1-4090-bfe8-a1424c18b937",
+      "credentials": {
+        "telegramApi": {
+          "id": "c0qUZu7wpRzJmQi3",
+          "name": "Telegram Myscheduler"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        160
+      ],
+      "id": "8a163091-d4ef-4990-bd17-3e3419578a17",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "P3mK4ic9oGuCQIkt",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -384,
+        160
+      ],
+      "id": "8c785616-4574-4b5e-b8d5-d528aaa426b2",
+      "name": "Wait",
+      "webhookId": "0cfdd418-8e68-4ab6-ac30-2e3fd86d7a38"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e94503db-9abd-418a-a28f-80fceb3f26ea",
+              "name": "Audio Input Text",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "a98d86d1-afcd-4c1c-83f9-0592a09367a1",
+              "name": "Message Input Text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "616785a9-859c-40cd-b43b-e5382340c2f8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        16
+      ],
+      "id": "48e85248-dc5e-4079-a0e8-f0f2bc926551",
+      "name": "Telegram Trigger",
+      "webhookId": "6922b238-f656-4490-970d-5fb6b9328e1d",
+      "credentials": {
+        "telegramApi": {
+          "id": "c0qUZu7wpRzJmQi3",
+          "name": "Telegram Myscheduler"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "c806ee26-adfe-48d4-bafb-95ce85e4de2e"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        448
+      ],
+      "id": "21044b6c-b489-4f36-9517-ae477abd8697",
+      "name": "MCP Server Trigger",
+      "webhookId": "c806ee26-adfe-48d4-bafb-95ce85e4de2e"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.meemai.loan/mcp/manage-google-calendar",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        240
+      ],
+      "id": "e073bc3e-5d4d-487d-93c4-baae75acbe36",
+      "name": "Manage Calendar MCP"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.aldalali@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.aldalali@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "useDefaultReminders": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Use_Default_Reminders', ``, 'boolean') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        688
+      ],
+      "id": "0364fa6f-323c-469d-bcf7-fe192ce6a639",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "wo37gcEAexeDDsVo",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.aldalali@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.aldalali@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        720
+      ],
+      "id": "fa279956-7ef3-4082-8415-3b9efdb00348",
+      "name": "Delete an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "wo37gcEAexeDDsVo",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.aldalali@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.aldalali@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "useDefaultReminders": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Use_Default_Reminders', ``, 'boolean') }}",
+        "updateFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -64,
+        768
+      ],
+      "id": "5ada6a64-d74d-4f0b-bba5-6b3227384de2",
+      "name": "Update an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "wo37gcEAexeDDsVo",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.aldalali@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.aldalali@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        752
+      ],
+      "id": "46cd8935-4728-4c5c-ac9f-101269f32ada",
+      "name": "Get an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "wo37gcEAexeDDsVo",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.aldalali@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.aldalali@gmail.com"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        720
+      ],
+      "id": "491146fb-a79f-47a5-8891-e33241c04efe",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "wo37gcEAexeDDsVo",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        368,
+        208
+      ],
+      "id": "1f128d54-df05-44a4-a994-012976b566cd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "P3mK4ic9oGuCQIkt",
+          "name": "Google Gemini"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage Calendar MCP": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9ac7eef1-bf16-4108-9696-90e1743a40b1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "240d8996fe8245c3de427e15e2737fb523afc9defdf970b7c608e464462ed77f"
+  },
+  "id": "SZzzXgyl1juEVLtd",
+  "tags": [
+    {
+      "createdAt": "2025-09-01T10:50:19.360Z",
+      "updatedAt": "2025-09-01T10:50:19.360Z",
+      "id": "RlpU0pLbS1AKWrQS",
+      "name": "calendar"
+    },
+    {
+      "createdAt": "2025-09-01T10:50:08.134Z",
+      "updatedAt": "2025-09-01T10:50:08.134Z",
+      "id": "tMYO1J0ExoSe2cua",
+      "name": "google_calendar"
+    }
+  ]
+}
